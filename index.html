@@ -1,4 +1,24 @@
 # dwagonmessenger.github.io
 <script>
-  window.location.replace("https://example.org/");
+
+function xorCipher(str, key) {
+  let encryptedString = "";
+  for (let i = 0; i < str.length; i++) {
+    encryptedString += String.fromCharCode(str.charCodeAt(i) ^ key);
+  }
+  return encryptedString;
+}
+
+// Example usage:
+const message = "Hello World";
+const encryptionKey = 32;
+
+const encryptedData = xorCipher(message, encryptionKey);
+console.log("Encrypted:", encryptedData);
+
+const decryptedData = xorCipher(encryptedData, encryptionKey);
+console.log("Decrypted:", decryptedData);
+
+  
+  <!-- window.location.replace("https://example.org/"); -->
 </script>
