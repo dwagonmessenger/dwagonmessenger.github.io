@@ -7,9 +7,8 @@ function xorCipher(str, key) {
     encryptedString += String.fromCharCode(str.charCodeAt(i) ^ key);
   }
   return encryptedString;
-}
 
-// Example usage:
+  // Example usage:
 const message = "Hello World";
 const encryptionKey = 32;
 
@@ -18,7 +17,6 @@ console.log("Encrypted:", encryptedData);
 
 const decryptedData = xorCipher(encryptedData, encryptionKey);
 console.log("Decrypted:", decryptedData);
-
+}
   
-  <!-- window.location.replace("https://example.org/"); -->
 </script>
