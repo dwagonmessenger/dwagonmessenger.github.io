@@ -1,4 +1,17 @@
-# dwagonmessenger.github.io
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dwagon Messenger Access</title> 
+</head>
+
+<body>
+<div class="container">
+    <h2>dm:access</h2>
+    <input type='password' id='password' name='password' placeholder="password">
+    <button onclick="access()">ACCESS</button>
+</div>
+</body>
+
 <script>
 
 const a = "NUAATA[A_RURAVTPHY_A";
@@ -6,19 +19,15 @@ const a = "NUAATA[A_RURAVTPHY_A";
 function xorCipher(str, key) {
   let encryptedString = "";
   for (let i = 0; i < str.length; i++) {
-    encryptedString += String.fromCharCode(str.charCodeAt(i) ^ key);
+    encryptedString += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
   }
   return encryptedString;
-
-  // Example usage:
-const message = "Hello World";
-const encryptionKey = 32;
-
-const encryptedData = xorCipher(message, encryptionKey);
-console.log("Encrypted:", encryptedData);
-
-const decryptedData = xorCipher(encryptedData, encryptionKey);
-console.log("Decrypted:", decryptedData);
 }
-  
+
+function access() {
+  const password = document.getElementById('password').value;
+  const crypt = xorCipher(a, password);
+  window.location.replace(crypt);    
+}
+
 </script>
