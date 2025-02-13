@@ -1,16 +1,180 @@
 <!DOCTYPE html>
+
 <html>
+
 <head>
-    <title>Dwagon Messenger Access</title> 
+	<title>:DM P2P CHAT</title>
+	<style>
+		body {
+          background-color: rgb(88, 88, 88);
+          color: rgb(22, 22, 22);
+        }
+		button {
+			width: 120px;
+			background-color: rgb(88, 88, 88);
+			border: none;
+			color: rgb(22, 22, 22);
+			padding: 12px 20px;
+			text-decoration: none;
+			margin: 4px 2px;
+			cursor: pointer;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+		}
+		input[type=text] {
+			width: calc(100% - 130px);
+			padding: 12px 20px;
+			margin: 8px 0;
+			box-sizing: border-box;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+			background-color: rgb(88, 88, 88);
+			color: rgb(22, 22, 22);
+			font-size: 12px;
+		}
+		textarea {
+			width: calc(100% - 130px);
+			height: 150px;
+			padding: 12px 20px;
+			box-sizing: border-box;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+			background-color: rgb(88, 88, 88);
+			font-size: 12px;
+			resize: none;
+		}
+	</style>
 </head>
-<script src="https://cdn.jsdelivr.net/npm/axios@1/dist/axios.min.js"></script>
+
+<body>
+	<h1>:DM Peer2Peer Chat</h1>
+	<h3>Seule la connexion initiale d'obtention d'identifiant transite par un serveur
+	<br>Toutes les autres connexions sont effectuées directement entre utilisateurs
+	<br>Les données sont transmises avec l'encryptage de base de PeerJS
+	<br>Elles ne sont pas stockées, et ne sont disponibles que dans votre session
+	<br>Elles ne seront plus disponibles lors de la prochaine connexion</h3>
+	<h1 id="username-actuel"></h1>
+
+	<div>
+		<input type="text" id="username-input" name="username" placeholder="Username">
+		<button onclick="auth()" id="auth-button">S'authentifier</button>
+	</div>
+
+	<div>
+		<input type="text" id="peerid-input" name="peerid" placeholder="Peer ID">
+		<button onclick="connexion()">Connecter</button>
+	</div>
+	
+	<div id="send-message-container">
+	  <textarea id="msg-input" name="msg" placeholder="Envoyer un message"></textarea>
+	  <button onclick="envoi()" disabled>Envoyer</button> <!-- Initially disabled -->
+	  <p id='status'></p> <!-- For status updates -->
+    </div>
+
+</body>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
 <script>
-    axios.get('https://set-anemone-cosmic.ngrok-free.app/', { 'headers': { 'ngrok-skip-browser-warning': '1' } })
-      .then((response => {
-        console.log(response.data);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-    window.location.replace('https://set-anemone-cosmic.ngrok-free.app/');
+
+document.getElementById('auth-button').hidden = false;
+document.getElementById('username-input').hidden = false;
+
+var peer; // Définition du peer pour utilisation partout ensuite
+
+const serverid = "DwagonMessengerServer"
+
+var conn; // Définition de la variable servant à stocker la connexion (pour qu'elle puisse être accessible dans tous les fonctions)
+
+function auth() {
+	// Récupère la saisie d'username et convertit automatiquement certains caractères pour le rendre valide si possible
+	const username = document.getElementById('username-input').value.replace(' ','-').replace("'",'-');
+
+	peer = new Peer(username);
+
+	// Ouvre la connexion le PeerID censé correspondre au nom d'utilisateur
+	peer.on('open', function(id) {
+		console.log('Mon identifiant PeerJS est : ' + id);
+		document.getElementById('status').innerText += 'Connecté en tant que ' + username + "\n";
+		alert('Authentifié en tant que ' + username + ' !')
+		document.getElementById('auth-button').hidden = true;
+		document.getElementById('username-input').hidden = true;
+
+	});
+	// Gére les erreurs
+	peer.on('error', function(err) {
+		// Si le nom d'utilisateur est déjà utilisé
+		if (err.type === 'unavailable-id') {
+			alert("Nom d'utilisateur déjà utilisé. Merci d'en choisir un autre.");
+		}
+		// Si le nom d'utilisateur contient des caractères invalides
+		else if (err.type === 'invalid-id') {
+			alert("Certains caractères utilisés sont invalides. Merci de n'utiliser que des caractères alphanumériques (les espaces et apostrophes sont automatiquement convertis en tirets).");
+		}
+		// Si l'erreur est d'un autre type
+		else {
+			alert("Erreur de type " + err.type + ", consulter la console pour plus d'informations.");
+			console.log(err);
+		}
+	});
+		// Permet de gérer la réception de connexions initiées par d'autre Peers
+	// Ne permet pas directement l'envoi de messages
+	peer.on('connection', function(incomingConn) {
+		// Accepte la connexion et passe en mode 'data' pour gérer la réception des données
+		incomingConn.on('data', function(data){
+			console.log(data);
+			// Affiche les messages
+			document.getElementById("status").innerText += "\nCONNEXION INCOMING: " + data;
+		});
+	});
+}
+
+// Se connecte avec le PeerID fourni dans le champ de saisie
+function connexion() {
+	const targetPeerId = document.getElementById('peerid-input').value.replace(' ','-').replace("'",'-');
+	// Tente d'établir la connexion (avec le PeerID fourni) dans la variable 'conn'
+	conn = peer.connect(targetPeerId);
+	// Si la connexion est bien établie :
+	conn.on('open', function() {
+		alert("Connecté !");
+		// Active le bouton d'envoi de messages
+	    document.getElementById("send-message-container").querySelector("button").disabled = false;
+		// Gére la réception et l'affichage de données (messages)
+	    conn.on('data', function(data) {
+	        console.log('REÇU:', data);
+			// Affiche la donnée reçu dans l'élement <p> id='status'
+	        document.getElementById("status").innerText += "\nREÇU: " + data;
+	    });
+    });
+	// Si la connexion n'est pas établie ou fermée (en cas d'erreur en général) :
+    conn.on('error', (err) => {
+	  // Affiche l'erreur en notification (alert)
+      alert(err.type);
+	  // Désactive le bouton d'envoi d'envoi de messages 
+      document.getElementById("send-message-container").querySelector("button").disabled = true;
+    });
+};
+
+// Envoie le message saisi à la connexion établie
+function envoi() {
+	const msgValue = document.getElementById('msg-input').value;
+	// Vérifie que la connexion existe et est ouverte
+	if (conn && conn.open) {
+    	conn.send(msgValue); 
+    	document.getElementById("status").innerText += "\nENVOYÉ: " + msgValue; 
+    	document.getElementById('msg-input').value = ''; // Reset l'espace de saisie de messages.
+    } else { 
+    	alert("Pas de connexion active"); // Si la connexion n'est plus active
+    }
+};
+
+// Gére l'envoi de messages par Entrée sans Shift
+document.getElementById('msg-input').onkeyup = function(e) {
+  if (e.keyCode == 13 && !e.shiftKey) {
+    envoi()
+  }
+}
+
 </script>
+
+</html>
