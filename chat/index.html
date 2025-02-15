@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trystero P2P Chat</title>
-    <script src="/trystero-nostr.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
         #messages { border: 1px solid #ccc; padding: 10px; width: 300px; height: 200px; overflow-y: auto; margin: 10px auto; }
@@ -25,42 +24,45 @@
         <button onclick="sendMessage()">Envoyer</button>
     </div>
 
-    <script>
-        let room, sendMessageFn;
+<script src="https://cdn.jsdelivr.net/npm/trystero@latest/browser.min.js"></script>
+<script>
+    let room, sendMessageFn;
 
-        function joinRoom() {
-            const roomName = document.getElementById("room").value.trim();
-            if (!roomName) return alert("Veuillez entrer un nom de salon !");
-            
-            const { joinRoom } = Trystero.browser({ appId: "test-app" });
-            room = joinRoom(roomName);
+    function joinRoom() {
+        const roomName = document.getElementById("room").value.trim();
+        if (!roomName) return alert("Enter a room name!");
 
-            document.getElementById("roomName").textContent = roomName;
-            document.getElementById("chat").style.display = "block";
+        const { joinRoom } = Trystero.browser({ appId: "test-app" });
+        room = joinRoom(roomName);
 
-            sendMessageFn = room.broadcast;
-            room.onMessage((message) => {
-                displayMessage(message);
-            });
-        }
+        document.getElementById("chat").style.display = "block";
+        sendMessageFn = room.broadcast;
+        
+        room.onMessage((message) => {
+            displayMessage(message);
+        });
+    }
 
-        function sendMessage() {
-            const message = document.getElementById("messageInput").value.trim();
-            if (!message) return;
-            
-            sendMessageFn(message);
-            displayMessage(`Moi: ${message}`);
-            document.getElementById("messageInput").value = "";
-        }
+    function sendMessage() {
+        const message = document.getElementById("messageInput").value.trim();
+        if (!message) return;
+        
+        sendMessageFn(message);
+        displayMessage(`Me: ${message}`);
+        document.getElementById("messageInput").value = "";
+    }
 
-        function displayMessage(msg) {
-            const messagesDiv = document.getElementById("messages");
-            const p = document.createElement("p");
-            p.textContent = msg;
-            messagesDiv.appendChild(p);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-    </script>
+    function displayMessage(msg) {
+        const messagesDiv = document.getElementById("messages");
+        const p = document.createElement("p");
+        p.textContent = msg;
+        messagesDiv.appendChild(p);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    window.joinRoom = joinRoom;
+    window.sendMessage = sendMessage;
+</script>
 
 </body>
 </html>
