@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+	<title>:DM v0.6.2</title>
+	<style>
+		body {
+          background-color: rgb(88, 88, 88);
+          color: rgb(22, 22, 22);
+        }
+		button {
+			width: 120px;
+			background-color: rgb(88, 88, 88);
+			border: none;
+			color: rgb(22, 22, 22);
+			padding: 12px 20px;
+			text-decoration: none;
+			margin: 4px 2px;
+			cursor: pointer;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+		}
+		input[type=text] {
+			width: calc(100% - 130px);
+			padding: 12px 20px;
+			margin: 8px 0;
+			box-sizing: border-box;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+			background-color: rgb(88, 88, 88);
+			color: rgb(22, 22, 22);
+			font-size: 12px;
+		}
+		textarea {
+			width: calc(100% - 130px);
+			height: 150px;
+			padding: 12px 20px;
+			box-sizing: border-box;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+			background-color: rgb(88, 88, 88);
+			font-size: 12px;
+			resize: none;
+		}
+		#app {
+		display: flex;
+		justify-content: center;
+		align-content: center;
+		flex-wrap: wrap;
+		margin-top: 20px;
+		}
+		.video-tile {
+		box-sizing: border-box;
+		border: 5px solid black;
+		background-color: rgb(95, 95, 95);
+		aspect-ratio: 16/9;
+		}
+	</style>
+</head>
+
+<body>
+	<h1>:DM Peer2Peer Chat</h1>
+	<h3>Seule la connexion initiale d'obtention d'identifiant transite par un serveur
+	<br>Toutes les autres connexions sont effectuées directement entre utilisateurs
+	<br>Les données sont transmises avec l'encryptage de base de PeerJS
+	<br>Elles ne sont pas stockées, et ne sont disponibles que dans votre session
+	<br>Elles ne seront plus disponibles lors de la prochaine connexion</h3>
+	<h1 id="username-actuel"></h1>
+
+	<div>
+		<input type="text" id="username-input" name="username" placeholder="Username">
+		<button onclick="auth()" id="auth-button">S'authentifier</button>
+	</div>
+
+	<div>
+		<input type="text" id="peerid-input" name="peerid" placeholder="Peer ID">
+		<button onclick="connexion()">Connecter</button>
+	</div>
+
+	<div id="app"></div>
+
+	<div>
+		<button onclick="startCall()">📞 Appeler</button>
+		<button onclick="endCall()">❌ Terminer l'appel</button>
+	</div>
+	
+	<div id="send-message-container">
+	  <textarea id="msg-input" name="msg" placeholder="Envoyer un message"></textarea>
+	  <button onclick="envoi()" disabled>Envoyer</button>
+	  <p id='status'></p>
+    </div>
+
+</body>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<script>
+
+document.getElementById('auth-button').hidden = false;
+document.getElementById('username-input').hidden = false;
+
+var peer; // Définition du peer pour utilisation partout ensuite
+
+const serverid = "DwagonMessengerServer"
+
+var conn; // Définition de la variable servant à stocker la connexion (pour qu'elle puisse être accessible dans tous les fonctions)
+
+function auth() {
+	const username = document.getElementById('username-input').value;
+
+	if (isAlphaNumeric(username)) {
+
+	peer = new Peer(username);
+
+	// Ouvre la connexion le PeerID censé correspondre au nom d'utilisateur
+	peer.on('open', function(id) {
+		console.log('Mon identifiant PeerJS est : ' + id);
+		document.getElementById('status').innerText += 'Connecté en tant que ' + username + "\n";
+		alert('Authentifié en tant que ' + username + ' !')
+		document.getElementById('auth-button').hidden = true;
+		document.getElementById('username-input').hidden = true;
+
+	});
+	// Gére les erreurs
+	peer.on('error', function(err) {
+		// Si le nom d'utilisateur est déjà utilisé
+		if (err.type === 'unavailable-id') {
+			alert("Nom d'utilisateur déjà utilisé. Merci d'en choisir un autre.");
+		}
+		else if (err.type === 'peer-unavailable') {alert("Le nom d'utilisateur fourni ne correspond à aucun utilisateur actif !");}
+		// Si l'erreur est d'un autre type
+		else {
+			alert("Erreur de type " + err.type + ", consulter la console pour plus d'informations.");
+			console.log(err);
+		}
+	});
+		// Permet de gérer la réception de connexions initiées par d'autre Peers
+	// Ne permet pas directement l'envoi de messages
+	peer.on('connection', function(incomingConn) {
+		// Accepte la connexion et passe en mode 'data' pour gérer la réception des données
+		incomingConn.on('data', function(data){
+			console.log(data);
+			// Affiche les messages
+			document.getElementById("status").innerText += "\nCONNEXION INCOMING: " + data;
+		});
+	});
+        // Gére les appels
+	peer.on('call', call => {
+            if (confirm('Appel entrant, accepter ?')) {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    myStream = stream;
+					removeOldTiles();
+  					renderNewTiles(1);
+                    document.getElementById('video-1').srcObject = stream;
+                    call.answer(stream);
+                    call.on('stream', remoteStream => {
+						removeOldTiles();
+						renderNewTiles(2);
+                        document.getElementById('video-2').srcObject = remoteStream;
+                    });
+                    currentCall = call;
+                })
+                .catch(err => console.error('Error accessing camera/mic:', err));
+            }
+        });
+}
+else {alert("Le nom d'utilisateur contient des caractères non-alphanumériques, - ou _")}
+}
+
+// Se connecte avec le PeerID fourni dans le champ de saisie
+function connexion() {
+	const targetPeerId = document.getElementById('peerid-input').value;
+	if (isAlphaNumeric(targetPeerId)) {
+	// Tente d'établir la connexion (avec le PeerID fourni) dans la variable 'conn'
+	conn = peer.connect(targetPeerId);
+	// Si la connexion est bien établie :
+	conn.on('open', function() {
+		alert("Connecté !");
+		// Active le bouton d'envoi de messages
+	    document.getElementById("send-message-container").querySelector("button").disabled = false;
+		// Gére la réception et l'affichage de données (messages)
+	    conn.on('data', function(data) {
+	        console.log('REÇU:', data);
+			// Affiche la donnée reçu dans l'élement <p> id='status'
+	        document.getElementById("status").innerText += "\nREÇU: " + data;
+	    });
+    });
+	// Si la connexion n'est pas établie ou fermée (en cas d'erreur en général) :
+    conn.on('error', (err) => {
+	  // Affiche l'erreur en notification (alert)
+	  alert(err.type);
+	  // Désactive le bouton d'envoi d'envoi de messages 
+      document.getElementById("send-message-container").querySelector("button").disabled = true;
+    });
+	}
+	else {alert("Le nom d'utilisateur fourni est invalide !")}
+};
+
+// Envoie le message saisi à la connexion établie
+function envoi() {
+	const msgValue = document.getElementById('msg-input').value;
+	// Vérifie que la connexion existe et est ouverte
+	if (conn && conn.open) {
+    	conn.send(msgValue); 
+    	document.getElementById("status").innerText += "\nENVOYÉ: " + msgValue; 
+    	document.getElementById('msg-input').value = ''; // Reset l'espace de saisie de messages.
+    } else { 
+    	alert("Pas de connexion active"); // Si la connexion n'est plus active
+    }
+};
+
+function isAlphaNumeric(str) {
+  var code, i, len;
+
+  for (i = 0, len = str.length; i < len; i++) {
+    code = str.charCodeAt(i);
+    if (!(code > 47 && code < 58) && // 0-9
+        !(code > 64 && code < 91) && // A-Z
+        !(code > 96 && code < 123) && // a-z
+		!(code == 45) && // -
+		!(code == 95)) { // _
+      return false;
+    }
+  }
+  return true;
+};
+
+// Gére l'envoi de messages par Entrée sans Shift
+document.getElementById('msg-input').onkeyup = function(e) {
+  if (e.keyCode == 13 && !e.shiftKey) {
+    envoi()
+  }
+}
+
+//
+//
+//
+//
+//
+
+// constants
+const gapBetweenTiles = 5;
+var videoNumber = 0;
+const wrapper = document.getElementById("app");
+const input = document.getElementById("tiles-count");
+
+const removeOldTiles = () => {
+  wrapper.innerHTML = "";
+};
+
+const renderNewTiles = (tilesCount) => {
+  let num = 1;
+  Array.from({ length: tilesCount }, (_, i) => i + 1).forEach(() => {
+    const newTile = document.createElement("div");
+    newTile.className = "video-tile";
+    newTile.id = num.toString();
+
+    // Create a video element inside the tile
+    const videoElement = document.createElement("video");
+    videoElement.id = `video-${num}`;
+    videoElement.autoplay = true;
+    videoElement.playsInline = true;
+
+    newTile.appendChild(videoElement);
+    wrapper.appendChild(newTile);
+    num += 1;
+  });
+
+  // Adjust tile width
+  const tiles = document.getElementsByClassName("video-tile");
+  const elementsInARowCount = Math.ceil(Math.sqrt(tiles.length));
+  [...tiles].forEach((element) => {
+    element.style.width = `calc(calc(100% / ${elementsInARowCount}) - ${gapBetweenTiles}px)`;
+  });
+};
+
+
+// set gap
+wrapper.style.gap = `${gapBetweenTiles}px`;
+
+
+        // Start a call
+        function startCall() {
+            let peerId = document.getElementById('peerid-input').value;
+            if (!peerId) return alert("Please enter a Peer ID!");
+
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    myStream = stream;
+					removeOldTiles();
+					renderNewTiles(1);
+                    document.getElementById('video-1').srcObject = stream;
+                    let call = peer.call(peerId, stream);
+                    call.on('stream', remoteStream => {
+						removeOldTiles();
+						renderNewTiles(2);
+                        document.getElementById('video-2').srcObject = remoteStream;
+                    });
+                    currentCall = call;
+                })
+                .catch(err => console.error('Error accessing camera/mic:', err));
+        }
+
+        // End a call
+        function endCall() {
+            if (currentCall) {
+                currentCall.close();
+				removeOldTiles();
+            }
+            if (myStream) {
+                myStream.getTracks().forEach(track => track.stop());
+                const localVideo = document.getElementById('video-1');
+				const remoteVideo = document.getElementById('video-2');
+				if (localVideo) localVideo.srcObject = null;
+				if (remoteVideo) remoteVideo.srcObject = null;
+				removeOldTiles();
+            }
+        }
+
+</script>
+
+</html>
