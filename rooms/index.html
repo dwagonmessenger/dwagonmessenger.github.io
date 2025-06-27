@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+	<title>:DM ROOMS [insert room name]</title>
+	<style>
+		body {
+          background-color: rgb(88, 88, 88);
+          color: rgb(22, 22, 22);
+        }
+		button {
+			width: 120px;
+			background-color: rgb(88, 88, 88);
+			border: none;
+			color: rgb(22, 22, 22);
+			padding: 12px 20px;
+			text-decoration: none;
+			margin: 4px 2px;
+			cursor: pointer;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+		}
+		input[type=text] {
+			width: calc(100% - 130px);
+			padding: 12px 20px;
+			margin: 8px 0;
+			box-sizing: border-box;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+			background-color: rgb(88, 88, 88);
+			color: rgb(22, 22, 22);
+			font-size: 12px;
+		}
+		textarea {
+			width: calc(100% - 130px);
+			height: 150px;
+			padding: 12px 20px;
+			box-sizing: border-box;
+			border: 2px solid rgb(22, 22, 22);
+			border-radius: 3px;
+			background-color: rgb(88, 88, 88);
+			font-size: 12px;
+			resize: none;
+		}
+  </style>
+</head>
+
+<body>
+	<h1>DwagonMessenger Rooms !</h1>
+	<h3>Version de :DM CHAT optimisée pour des connexions plus simples avec plus d'utilisateurs
+	<br>L'authentification est effectuée à partir du nom de salon fourni
+	<br>Elle vous connecte ensuite automatiquement aux autres utilisateurs présents sur ce salon
+	<br>Vous n'avez donc besoin que d'un nom de salon commun pour initier la communication</h3>
+	<h1 id="username-actuel"></h1>
+
+	<div>
+		<input type="text" id="room-input" name="room" pattern="[a-zA-Z0-9]+" placeholder="nom du salon">
+    <input type="text" id="pseudo-input" name="pseudo" pattern="[a-zA-Z0-9]+" placeholder="pseudo">
+		<button onclick="join()" id="join-button">Rejoindre</button>
+	</div>
+	
+	<div id="send-message-container">
+	  <textarea id="msg-input" name="msg" placeholder="Envoyer un message"></textarea>
+	  <button onclick="envoi()" disabled>▶</button>
+	  <p id='status'></p>
+    </div>
+</body>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<script>
+  
+var peer;
+var conn = [];
+var i;
+i = 0;
+
+function join() {
+	const room = "dwagonmessenger-" + document.getElementById('room-input').value;
+
+	peer = new Peer(room+i.toString());
+
+	// Tente de s'authentifier
+	peer.on('open', function(id) {
+		console.log('Mon identifiant PeerJS est : ' + id);
+		document.getElementById('status').innerText += 'Connecté en tant que ' + room+i.toString() + "\n";
+		alert('Authentifié en tant que ' + room+i.toString() + ' !')
+    var k;
+    for (k = 0; i < 9; i++) {
+      conn[k] = peer.connect(room+k.toString());
+	    conn[k].on('open', function() {
+	      document.getElementById("send-message-container").querySelector("button").disabled = false;
+		    // Gére la réception et l'affichage de données (messages)
+	      conn[k].on('data', function(data) {
+	        console.log('REÇU:', data);
+			    // Affiche la donnée reçu dans l'élement <p> id='status'
+	        document.getElementById("status").innerText += "\nREÇU: " + data;
+	      });
+      });
+	    // Si la connexion n'est pas établie ou fermée (en cas d'erreur en général) :
+      conn[k].on('error', (err) => {
+	      // Affiche l'erreur en notification (alert)
+	      alert(err.type);
+	      // Désactive le bouton d'envoi d'envoi de messages 
+        // document.getElementById("send-message-container").querySelector("button").disabled = true;
+      });
+    }      
+	});
+  
+	// Gére les erreurs
+	peer.on('error', function(err) {
+		// Si le nom d'utilisateur est déjà utilisé
+		if (err.type === 'unavailable-id') {
+			i++;
+      join();
+		}
+		else if (err.type === 'peer-unavailable') {alert("Le nom d'utilisateur fourni ne correspond à aucun utilisateur actif !");}
+		// Si l'erreur est d'un autre type
+		else {
+			alert("Erreur de type " + err.type + ", consulter la console pour plus d'informations.");
+			console.log(err);
+		}
+	});
+  
+	// Permet de gérer la réception de connexions initiées par d'autre Peers
+	// Ne permet pas directement l'envoi de messages
+	peer.on('connection', function(incomingConn) {
+		// Accepte la connexion et passe en mode 'data' pour gérer la réception des données
+		incomingConn.on('data', function(data){
+			console.log(data);
+			// Affiche les messages
+			document.getElementById("status").innerText += "\nCONNEXION INCOMING: " + data;
+		});
+	});
+
+// Envoie le message saisi aux connexions ouvertes
+function envoi() {
+	const msgValue = document.getElementById('msg-input').value;
+	// Vérifie que la connexion existe et est ouverte
+  var k;
+  for (k = 0; i < 9; i++) {
+	  if (conn[k] && conn[k].open) {
+    	conn[k].send(msgValue); 
+    } else { 
+    	console.log("Pas de connexion"+k+"active"); // Si la connexion n'est plus active
+    }
+  }
+  document.getElementById("status").innerText += "\nENVOYÉ: " + msgValue; 
+  document.getElementById('msg-input').value = ''; // Reset l'espace de saisie de messages.
+};
+  
+// Gére l'envoi de messages par Entrée sans Shift
+document.getElementById('msg-input').onkeyup = function(e) {
+  if (e.keyCode == 13 && !e.shiftKey) {
+    envoi()
+  }
+}
+  
+</script>
