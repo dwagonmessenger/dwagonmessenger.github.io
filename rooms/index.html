@@ -86,6 +86,7 @@ function join() {
 		console.log('Mon identifiant PeerJS est : ' + id);
 		document.getElementById('status').innerText += 'Connecté en tant que ' + room+i.toString() + "\n";
 		alert('Authentifié en tant que ' + room+i.toString() + ' !')
+		i = 0;
     var k;
     for (k = 0; i < 9; i++) {
       conn[k] = peer.connect(room+k.toString());
@@ -98,6 +99,7 @@ function join() {
 	        document.getElementById("status").innerText += "\nREÇU: " + data;
 	      });
       });
+    }
 	    // Si la connexion n'est pas établie ou fermée (en cas d'erreur en général) :
       conn[k].on('error', (err) => {
 	      // Affiche l'erreur en notification (alert)
