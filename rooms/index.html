@@ -88,7 +88,7 @@ function join() {
 		alert('Authentifié en tant que ' + room+i.toString() + ' !')
 		i = 0;
     var k;
-    for (k = 0; i < 9; i++) {
+    for (k = 0; k < 9; k++) {
       conn[k] = peer.connect(room+k.toString());
 	    conn[k].on('open', function() {
 	      document.getElementById("send-message-container").querySelector("button").disabled = false;
@@ -99,7 +99,6 @@ function join() {
 	        document.getElementById("status").innerText += "\nREÇU: " + data;
 	      });
       });
-    }
 	    // Si la connexion n'est pas établie ou fermée (en cas d'erreur en général) :
       conn[k].on('error', (err) => {
 	      // Affiche l'erreur en notification (alert)
