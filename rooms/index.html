@@ -134,6 +134,8 @@ function join() {
 		});
 	});
 
+};
+	
 // Envoie le message saisi aux connexions ouvertes
 function envoi() {
 	const msgValue = document.getElementById('msg-input').value;
@@ -155,6 +157,6 @@ document.getElementById('msg-input').onkeyup = function(e) {
   if (e.keyCode == 13 && !e.shiftKey) {
     envoi()
   }
-}
+};
   
 </script>
